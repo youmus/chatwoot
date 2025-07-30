@@ -4,25 +4,29 @@ import { useStore, useStoreGetters } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { useEnterprise } from 'dashboard/composables/useEnterprise';
+import { useConfig } from 'dashboard/composables/useConfig';
 import BaseSettingsHeader from '../../components/BaseSettingsHeader.vue';
 import BasePaywallModal from '../../components/BasePaywallModal.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import Table from 'dashboard/components/widgets/Table.vue';
-import ConfirmationModal from 'dashboard/components/widgets/ConfirmationModal.vue';
+import Table from 'dashboard/components/table/Table.vue';
+import ConfirmationModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
-import Badge from 'dashboard/components-next/badge/Badge.vue';
-import ProgressBar from 'dashboard/components-next/progress-bar/ProgressBar.vue';
+// Badge component doesn't exist - will use inline styling instead
+// ProgressBar component will be implemented inline
 
 const store = useStore();
 const getters = useStoreGetters();
 const router = useRouter();
 const { t } = useI18n();
-const { isOnEnterpriseEdition } = useEnterprise();
+const { isEnterprise } = useConfig();
 
-const policies = computed(() => getters['agentCapacity/getCapacityPolicies'].value);
-const agentCapacities = computed(() => getters['agentCapacity/getAgentCapacities'].value);
+const policies = computed(
+  () => getters['agentCapacity/getCapacityPolicies'].value
+);
+const agentCapacities = computed(
+  () => getters['agentCapacity/getAgentCapacities'].value
+);
 const uiFlags = computed(() => getters['agentCapacity/getUIFlags'].value);
 
 const activeTab = ref('policies');
@@ -87,15 +91,6 @@ const agentColumns = [
   },
 ];
 
-onMounted(() => {
-  if (!isOnEnterpriseEdition.value) {
-    showPaywallModal.value = true;
-    return;
-  }
-  
-  fetchData();
-});
-
 const fetchData = async () => {
   await Promise.all([
     store.dispatch('agentCapacity/get'),
@@ -103,12 +98,21 @@ const fetchData = async () => {
   ]);
 };
 
-const navigateToNew = () => {
-  if (!isOnEnterpriseEdition.value) {
+onMounted(() => {
+  if (!isEnterprise) {
     showPaywallModal.value = true;
     return;
   }
-  
+
+  fetchData();
+});
+
+const navigateToNew = () => {
+  if (!isEnterprise) {
+    showPaywallModal.value = true;
+    return;
+  }
+
   router.push({ name: 'assignment_capacity_new' });
 };
 
@@ -131,7 +135,7 @@ const closeDeletePopup = () => {
 
 const confirmDelete = async () => {
   if (!selectedPolicy.value) return;
-  
+
   try {
     loading.value[selectedPolicy.value.id] = true;
     await store.dispatch('agentCapacity/delete', selectedPolicy.value.id);
@@ -144,13 +148,13 @@ const confirmDelete = async () => {
   }
 };
 
-const getUtilizationColor = (percentage) => {
+const getUtilizationColor = percentage => {
   if (percentage >= 90) return 'danger';
   if (percentage >= 70) return 'warning';
   return 'success';
 };
 
-const getUtilizationPercentage = (capacity) => {
+const getUtilizationPercentage = capacity => {
   if (!capacity.max_capacity) return 0;
   return Math.round((capacity.current_load / capacity.max_capacity) * 100);
 };
@@ -166,16 +170,16 @@ const getUtilizationPercentage = (capacity) => {
     />
 
     <div class="p-8">
-      <div v-if="isOnEnterpriseEdition" class="mb-6">
+      <div v-if="isEnterprise" class="mb-6">
         <div class="flex gap-4 border-b border-slate-200">
           <button
             v-for="tab in tabs"
             :key="tab.key"
+            class="px-4 py-2 text-sm font-medium transition-colors"
             :class="[
-              'px-4 py-2 text-sm font-medium transition-colors',
               activeTab === tab.key
                 ? 'text-woot-600 border-b-2 border-woot-600'
-                : 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-600 hover:text-slate-900',
             ]"
             @click="activeTab = tab.key"
           >
@@ -184,13 +188,19 @@ const getUtilizationPercentage = (capacity) => {
         </div>
       </div>
 
-      <div v-if="!isOnEnterpriseEdition" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+      <div
+        v-if="!isEnterprise"
+        class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6"
+      >
         <p class="text-yellow-800">
           {{ $t('ASSIGNMENT_SETTINGS.CAPACITY.ENTERPRISE_ONLY') }}
         </p>
       </div>
 
-      <div v-else-if="uiFlags.isFetching" class="flex items-center justify-center h-64">
+      <div
+        v-else-if="uiFlags.isFetching"
+        class="flex items-center justify-center h-64"
+      >
         <Spinner size="large" />
       </div>
 
@@ -225,9 +235,12 @@ const getUtilizationPercentage = (capacity) => {
           </template>
 
           <template #agents_count="{ row }">
-            <Badge variant="default">
-              {{ row.agents_count }} {{ $tc('COMMON.AGENTS', row.agents_count) }}
-            </Badge>
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800"
+            >
+              {{ row.agents_count }}
+              {{ $tc('COMMON.AGENTS', row.agents_count) }}
+            </span>
           </template>
 
           <template #actions="{ row }">
@@ -272,7 +285,9 @@ const getUtilizationPercentage = (capacity) => {
                 class="w-8 h-8 rounded-full"
               />
               <div>
-                <div class="font-medium text-slate-900">{{ row.agent.name }}</div>
+                <div class="font-medium text-slate-900">
+                  {{ row.agent.name }}
+                </div>
                 <div class="text-xs text-slate-600">{{ row.agent.email }}</div>
               </div>
             </div>
@@ -294,11 +309,24 @@ const getUtilizationPercentage = (capacity) => {
               <div class="flex justify-between text-sm">
                 <span>{{ getUtilizationPercentage(row) }}%</span>
               </div>
-              <ProgressBar
-                :value="getUtilizationPercentage(row)"
-                :color="getUtilizationColor(getUtilizationPercentage(row))"
-                size="small"
-              />
+              <!-- Progress bar -->
+              <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div
+                  class="h-full rounded-full transition-all duration-300"
+                  :class="{
+                    'bg-green-500':
+                      getUtilizationColor(getUtilizationPercentage(row)) ===
+                      'success',
+                    'bg-yellow-500':
+                      getUtilizationColor(getUtilizationPercentage(row)) ===
+                      'warning',
+                    'bg-red-500':
+                      getUtilizationColor(getUtilizationPercentage(row)) ===
+                      'danger',
+                  }"
+                  :style="`width: ${getUtilizationPercentage(row)}%`"
+                />
+              </div>
             </div>
           </template>
         </Table>
@@ -308,7 +336,11 @@ const getUtilizationPercentage = (capacity) => {
     <ConfirmationModal
       v-model:show="showDeletePopup"
       :title="$t('ASSIGNMENT_SETTINGS.CAPACITY.DELETE.TITLE')"
-      :message="$t('ASSIGNMENT_SETTINGS.CAPACITY.DELETE.MESSAGE', { name: selectedPolicy?.name })"
+      :message="
+        $t('ASSIGNMENT_SETTINGS.CAPACITY.DELETE.MESSAGE', {
+          name: selectedPolicy?.name,
+        })
+      "
       :confirm-text="$t('COMMON.DELETE')"
       :cancel-text="$t('COMMON.CANCEL')"
       @confirm="confirmDelete"

@@ -1,5 +1,3 @@
-import Vue from 'vue';
-
 export const mutations = {
   setUIFlag(state, data) {
     state.uiFlags = {
@@ -11,33 +9,46 @@ export const mutations = {
   setCapacityPolicies(state, policies) {
     state.policies = {};
     policies.forEach(policy => {
-      Vue.set(state.policies, policy.id, policy);
+      state.policies[policy.id] = policy;
     });
   },
 
   setCapacityPolicy(state, policy) {
-    Vue.set(state.policies, policy.id, policy);
+    state.policies = {
+      ...state.policies,
+      [policy.id]: policy,
+    };
   },
 
   deleteCapacityPolicy(state, id) {
-    Vue.delete(state.policies, id);
+    const { [id]: deleted, ...rest } = state.policies;
+    state.policies = rest;
   },
 
   setAgentCapacities(state, capacities) {
     if (Array.isArray(capacities)) {
+      const newCapacities = {};
       capacities.forEach(capacity => {
-        Vue.set(state.agentCapacities, capacity.agent_id, capacity);
+        newCapacities[capacity.agent_id] = capacity;
       });
+      state.agentCapacities = {
+        ...state.agentCapacities,
+        ...newCapacities,
+      };
     } else {
       state.agentCapacities = capacities;
     }
   },
 
   setAgentCapacity(state, capacity) {
-    Vue.set(state.agentCapacities, capacity.agent_id, capacity);
+    state.agentCapacities = {
+      ...state.agentCapacities,
+      [capacity.agent_id]: capacity,
+    };
   },
 
   deleteAgentCapacity(state, agentId) {
-    Vue.delete(state.agentCapacities, agentId);
+    const { [agentId]: deleted, ...rest } = state.agentCapacities;
+    state.agentCapacities = rest;
   },
 };

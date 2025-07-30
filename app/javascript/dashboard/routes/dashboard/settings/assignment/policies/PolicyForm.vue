@@ -7,10 +7,10 @@ import { useI18n } from 'vue-i18n';
 import BaseSettingsHeader from '../../components/BaseSettingsHeader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components/widgets/forms/Input.vue';
-import Textarea from 'dashboard/components/widgets/forms/Textarea.vue';
+import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
-import Select from 'dashboard/components/widgets/forms/Select.vue';
-import MultiSelect from 'dashboard/components/widgets/forms/MultiSelect.vue';
+// Use native select element instead
+import MultiSelect from 'dashboard/components-next/filter/inputs/MultiSelect.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 
 const route = useRoute();
@@ -70,23 +70,13 @@ const policyTypes = [
 
 const errors = ref({});
 
-onMounted(async () => {
-  // Load required data
-  await Promise.all([
-    store.dispatch('teams/get'),
-    store.dispatch('agents/get'),
-    store.dispatch('inboxes/get'),
-  ]);
-
-  if (isEditMode.value) {
-    await loadPolicy();
-  }
-});
-
 const loadPolicy = async () => {
   try {
     loading.value = true;
-    const policy = await store.dispatch('assignmentPolicies/show', policyId.value);
+    const policy = await store.dispatch(
+      'assignmentPolicies/show',
+      policyId.value
+    );
     formData.value = {
       name: policy.name,
       description: policy.description || '',
@@ -113,21 +103,23 @@ const loadPolicy = async () => {
 
 const validateForm = () => {
   errors.value = {};
-  
+
   if (!formData.value.name) {
     errors.value.name = t('ASSIGNMENT_SETTINGS.POLICIES.FORM.NAME_REQUIRED');
   }
-  
+
   if (!formData.value.policy_type) {
-    errors.value.policy_type = t('ASSIGNMENT_SETTINGS.POLICIES.FORM.TYPE_REQUIRED');
+    errors.value.policy_type = t(
+      'ASSIGNMENT_SETTINGS.POLICIES.FORM.TYPE_REQUIRED'
+    );
   }
-  
+
   return Object.keys(errors.value).length === 0;
 };
 
 const savePolicy = async () => {
   if (!validateForm()) return;
-  
+
   try {
     const payload = {
       name: formData.value.name,
@@ -139,7 +131,7 @@ const savePolicy = async () => {
       max_assignments_per_agent: formData.value.max_assignments_per_agent,
       reassignment_interval: formData.value.reassignment_interval,
     };
-    
+
     if (isEditMode.value) {
       await store.dispatch('assignmentPolicies/update', {
         id: policyId.value,
@@ -150,7 +142,7 @@ const savePolicy = async () => {
       await store.dispatch('assignmentPolicies/create', payload);
       useAlert(t('ASSIGNMENT_SETTINGS.POLICIES.CREATE.SUCCESS'));
     }
-    
+
     router.push({ name: 'assignment_policies_list' });
   } catch (error) {
     const message = isEditMode.value
@@ -163,12 +155,29 @@ const savePolicy = async () => {
 const cancel = () => {
   router.push({ name: 'assignment_policies_list' });
 };
+
+onMounted(async () => {
+  // Load required data
+  await Promise.all([
+    store.dispatch('teams/get'),
+    store.dispatch('agents/get'),
+    store.dispatch('inboxes/get'),
+  ]);
+
+  if (isEditMode.value) {
+    await loadPolicy();
+  }
+});
 </script>
 
 <template>
   <div>
     <BaseSettingsHeader
-      :title="isEditMode ? $t('ASSIGNMENT_SETTINGS.POLICIES.EDIT_HEADER') : $t('ASSIGNMENT_SETTINGS.POLICIES.NEW_HEADER')"
+      :title="
+        isEditMode
+          ? $t('ASSIGNMENT_SETTINGS.POLICIES.EDIT_HEADER')
+          : $t('ASSIGNMENT_SETTINGS.POLICIES.NEW_HEADER')
+      "
       :description="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM_DESCRIPTION')"
       :back-button-label="$t('ASSIGNMENT_SETTINGS.POLICIES.BACK_BUTTON')"
       @back="cancel"
@@ -182,25 +191,35 @@ const cancel = () => {
       <form @submit.prevent="savePolicy">
         <div class="space-y-6">
           <!-- Basic Information -->
-          <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h3 class="text-lg font-medium mb-4">{{ $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.BASIC_INFO') }}</h3>
-            
+          <div
+            class="bg-white rounded-lg shadow-sm border border-slate-200 p-6"
+          >
+            <h3 class="text-lg font-medium mb-4">
+              {{ $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.BASIC_INFO') }}
+            </h3>
+
             <div class="space-y-4">
               <Input
                 v-model="formData.name"
                 :label="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.NAME')"
-                :placeholder="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.NAME_PLACEHOLDER')"
+                :placeholder="
+                  $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.NAME_PLACEHOLDER')
+                "
                 :error="errors.name"
                 required
               />
-              
-              <Textarea
+
+              <TextArea
                 v-model="formData.description"
                 :label="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.DESCRIPTION')"
-                :placeholder="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.DESCRIPTION_PLACEHOLDER')"
+                :placeholder="
+                  $t(
+                    'ASSIGNMENT_SETTINGS.POLICIES.FORM.DESCRIPTION_PLACEHOLDER'
+                  )
+                "
                 rows="3"
               />
-              
+
               <div class="flex items-center gap-3">
                 <Switch v-model="formData.active" />
                 <label class="text-sm font-medium">
@@ -211,9 +230,13 @@ const cancel = () => {
           </div>
 
           <!-- Policy Type -->
-          <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h3 class="text-lg font-medium mb-4">{{ $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.POLICY_TYPE') }}</h3>
-            
+          <div
+            class="bg-white rounded-lg shadow-sm border border-slate-200 p-6"
+          >
+            <h3 class="text-lg font-medium mb-4">
+              {{ $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.POLICY_TYPE') }}
+            </h3>
+
             <div class="space-y-3">
               <div
                 v-for="type in policyTypes"
@@ -222,7 +245,7 @@ const cancel = () => {
                 :class="[
                   formData.policy_type === type.value
                     ? 'border-woot-500 bg-woot-50'
-                    : 'border-slate-200 hover:border-slate-300'
+                    : 'border-slate-200 hover:border-slate-300',
                 ]"
                 @click="formData.policy_type = type.value"
               >
@@ -234,7 +257,9 @@ const cancel = () => {
                   />
                   <div>
                     <h4 class="font-medium">{{ type.label }}</h4>
-                    <p class="text-sm text-slate-600 mt-1">{{ type.description }}</p>
+                    <p class="text-sm text-slate-600 mt-1">
+                      {{ type.description }}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -245,49 +270,65 @@ const cancel = () => {
           </div>
 
           <!-- Conditions -->
-          <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h3 class="text-lg font-medium mb-4">{{ $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.CONDITIONS') }}</h3>
-            
+          <div
+            class="bg-white rounded-lg shadow-sm border border-slate-200 p-6"
+          >
+            <h3 class="text-lg font-medium mb-4">
+              {{ $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.CONDITIONS') }}
+            </h3>
+
             <div class="space-y-4">
               <MultiSelect
                 v-model="formData.conditions.inbox_ids"
                 :options="inboxes"
                 :label="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.INBOXES')"
-                :placeholder="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.INBOXES_PLACEHOLDER')"
+                :placeholder="
+                  $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.INBOXES_PLACEHOLDER')
+                "
                 track-by="id"
                 label-key="name"
               />
-              
+
               <MultiSelect
                 v-model="formData.conditions.team_ids"
                 :options="teams"
                 :label="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.TEAMS')"
-                :placeholder="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.TEAMS_PLACEHOLDER')"
+                :placeholder="
+                  $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.TEAMS_PLACEHOLDER')
+                "
                 track-by="id"
                 label-key="name"
               />
-              
+
               <MultiSelect
                 v-model="formData.conditions.agent_ids"
                 :options="agents"
                 :label="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.AGENTS')"
-                :placeholder="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.AGENTS_PLACEHOLDER')"
+                :placeholder="
+                  $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.AGENTS_PLACEHOLDER')
+                "
                 track-by="id"
                 label-key="name"
               />
-              
+
               <div class="flex items-center gap-3">
                 <Switch v-model="formData.conditions.business_hours_only" />
                 <label class="text-sm font-medium">
-                  {{ $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.BUSINESS_HOURS_ONLY') }}
+                  {{
+                    $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.BUSINESS_HOURS_ONLY')
+                  }}
                 </label>
               </div>
-              
+
               <MultiSelect
                 v-model="formData.conditions.excluded_agent_ids"
                 :options="agents"
                 :label="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.EXCLUDED_AGENTS')"
-                :placeholder="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.EXCLUDED_AGENTS_PLACEHOLDER')"
+                :placeholder="
+                  $t(
+                    'ASSIGNMENT_SETTINGS.POLICIES.FORM.EXCLUDED_AGENTS_PLACEHOLDER'
+                  )
+                "
                 track-by="id"
                 label-key="name"
               />
@@ -295,35 +336,57 @@ const cancel = () => {
           </div>
 
           <!-- Advanced Settings -->
-          <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h3 class="text-lg font-medium mb-4">{{ $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.ADVANCED') }}</h3>
-            
+          <div
+            class="bg-white rounded-lg shadow-sm border border-slate-200 p-6"
+          >
+            <h3 class="text-lg font-medium mb-4">
+              {{ $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.ADVANCED') }}
+            </h3>
+
             <div class="space-y-4">
               <Input
                 v-model.number="formData.weight"
                 type="number"
                 :label="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.WEIGHT')"
-                :placeholder="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.WEIGHT_PLACEHOLDER')"
+                :placeholder="
+                  $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.WEIGHT_PLACEHOLDER')
+                "
                 :help-text="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.WEIGHT_HELP')"
                 min="1"
                 max="100"
               />
-              
+
               <Input
                 v-model.number="formData.max_assignments_per_agent"
                 type="number"
                 :label="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.MAX_ASSIGNMENTS')"
-                :placeholder="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.MAX_ASSIGNMENTS_PLACEHOLDER')"
-                :help-text="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.MAX_ASSIGNMENTS_HELP')"
+                :placeholder="
+                  $t(
+                    'ASSIGNMENT_SETTINGS.POLICIES.FORM.MAX_ASSIGNMENTS_PLACEHOLDER'
+                  )
+                "
+                :help-text="
+                  $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.MAX_ASSIGNMENTS_HELP')
+                "
                 min="1"
               />
-              
+
               <Input
                 v-model.number="formData.reassignment_interval"
                 type="number"
-                :label="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.REASSIGNMENT_INTERVAL')"
-                :placeholder="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.REASSIGNMENT_INTERVAL_PLACEHOLDER')"
-                :help-text="$t('ASSIGNMENT_SETTINGS.POLICIES.FORM.REASSIGNMENT_INTERVAL_HELP')"
+                :label="
+                  $t('ASSIGNMENT_SETTINGS.POLICIES.FORM.REASSIGNMENT_INTERVAL')
+                "
+                :placeholder="
+                  $t(
+                    'ASSIGNMENT_SETTINGS.POLICIES.FORM.REASSIGNMENT_INTERVAL_PLACEHOLDER'
+                  )
+                "
+                :help-text="
+                  $t(
+                    'ASSIGNMENT_SETTINGS.POLICIES.FORM.REASSIGNMENT_INTERVAL_HELP'
+                  )
+                "
                 min="0"
               />
             </div>
@@ -332,10 +395,7 @@ const cancel = () => {
 
         <!-- Actions -->
         <div class="flex justify-end gap-3 mt-8">
-          <Button
-            variant="clear"
-            @click="cancel"
-          >
+          <Button variant="clear" @click="cancel">
             {{ $t('COMMON.CANCEL') }}
           </Button>
           <Button

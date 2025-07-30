@@ -33,12 +33,16 @@ export class AgentCapacityPoliciesAPI extends ApiClient {
 
   // POST /api/v1/accounts/:accountId/agent_capacity_policies/:id/assign_agents
   assignAgents(id, agentIds) {
-    return axios.post(`${this.url}/${id}/assign_agents`, { agent_ids: agentIds });
+    return axios.post(`${this.url}/${id}/assign_agents`, {
+      agent_ids: agentIds,
+    });
   }
 
   // POST /api/v1/accounts/:accountId/agent_capacity_policies/:id/remove_agents
   removeAgents(id, agentIds) {
-    return axios.post(`${this.url}/${id}/remove_agents`, { agent_ids: agentIds });
+    return axios.post(`${this.url}/${id}/remove_agents`, {
+      agent_ids: agentIds,
+    });
   }
 
   // GET /api/v1/accounts/:accountId/agent_capacity_policies/agent_capacities

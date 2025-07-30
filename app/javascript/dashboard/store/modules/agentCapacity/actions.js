@@ -64,7 +64,10 @@ export const actions = {
   assignAgents: async ({ commit }, { id, agentIds }) => {
     commit('setUIFlag', { isAssigningAgents: true });
     try {
-      const response = await agentCapacityPoliciesAPI.assignAgents(id, agentIds);
+      const response = await agentCapacityPoliciesAPI.assignAgents(
+        id,
+        agentIds
+      );
       // Update agent capacities based on response
       if (response.data.agent_capacities) {
         commit('setAgentCapacities', response.data.agent_capacities);
@@ -80,7 +83,10 @@ export const actions = {
   removeAgents: async ({ commit }, { id, agentIds }) => {
     commit('setUIFlag', { isAssigningAgents: true });
     try {
-      const response = await agentCapacityPoliciesAPI.removeAgents(id, agentIds);
+      const response = await agentCapacityPoliciesAPI.removeAgents(
+        id,
+        agentIds
+      );
       // Remove agent capacities
       agentIds.forEach(agentId => {
         commit('deleteAgentCapacity', agentId);
@@ -96,7 +102,8 @@ export const actions = {
   getAgentCapacities: async ({ commit }, params = {}) => {
     commit('setUIFlag', { isFetching: true });
     try {
-      const response = await agentCapacityPoliciesAPI.getAgentCapacities(params);
+      const response =
+        await agentCapacityPoliciesAPI.getAgentCapacities(params);
       commit('setAgentCapacities', response.data);
     } catch (error) {
       throw new Error(error);

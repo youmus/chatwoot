@@ -6,27 +6,36 @@ import BaseSettingsHeader from '../../components/BaseSettingsHeader.vue';
 import ReportMetricCard from 'dashboard/routes/dashboard/settings/reports/components/ReportMetricCard.vue';
 import DateRange from 'dashboard/routes/dashboard/settings/reports/components/Filters/DateRange.vue';
 import Agents from 'dashboard/routes/dashboard/settings/reports/components/Filters/Agents.vue';
-import MultiSelect from 'dashboard/components/widgets/forms/MultiSelect.vue';
+import MultiSelect from 'dashboard/components-next/filter/inputs/MultiSelect.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
-import Table from 'dashboard/components/widgets/Table.vue';
-import LineChart from 'dashboard/components/widgets/chart/LineChart.vue';
-import BarChart from 'dashboard/components/widgets/chart/BarChart.vue';
-import PieChart from 'dashboard/components/widgets/chart/PieChart.vue';
+import Table from 'dashboard/components/table/Table.vue';
+import BarChart from 'shared/components/charts/BarChart.vue';
+// LineChart and PieChart will be replaced with BarChart
 
 const store = useStore();
 const getters = useStoreGetters();
 const { t } = useI18n();
 
 const metrics = computed(() => getters['assignmentMetrics/getMetrics'].value);
-const agentHistory = computed(() => getters['assignmentMetrics/getAgentHistory'].value);
-const policyPerformance = computed(() => getters['assignmentMetrics/getPolicyPerformance'].value);
-const agentUtilization = computed(() => getters['assignmentMetrics/getAgentUtilization'].value);
+const agentHistory = computed(
+  () => getters['assignmentMetrics/getAgentHistory'].value
+);
+const policyPerformance = computed(
+  () => getters['assignmentMetrics/getPolicyPerformance'].value
+);
+const agentUtilization = computed(
+  () => getters['assignmentMetrics/getAgentUtilization'].value
+);
 const uiFlags = computed(() => getters['assignmentMetrics/getUIFlags'].value);
-const assignmentPolicies = computed(() => getters['assignmentPolicies/getAssignmentPolicies'].value);
+const assignmentPolicies = computed(
+  () => getters['assignmentPolicies/getAssignmentPolicies'].value
+);
 
 const filters = ref({
-  startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0],
   endDate: new Date().toISOString().split('T')[0],
   agentIds: [],
   policyIds: [],
@@ -38,9 +47,18 @@ const activeTab = ref('overview');
 
 const tabs = [
   { key: 'overview', label: t('ASSIGNMENT_SETTINGS.METRICS.TABS.OVERVIEW') },
-  { key: 'agent_performance', label: t('ASSIGNMENT_SETTINGS.METRICS.TABS.AGENT_PERFORMANCE') },
-  { key: 'policy_performance', label: t('ASSIGNMENT_SETTINGS.METRICS.TABS.POLICY_PERFORMANCE') },
-  { key: 'utilization', label: t('ASSIGNMENT_SETTINGS.METRICS.TABS.UTILIZATION') },
+  {
+    key: 'agent_performance',
+    label: t('ASSIGNMENT_SETTINGS.METRICS.TABS.AGENT_PERFORMANCE'),
+  },
+  {
+    key: 'policy_performance',
+    label: t('ASSIGNMENT_SETTINGS.METRICS.TABS.POLICY_PERFORMANCE'),
+  },
+  {
+    key: 'utilization',
+    label: t('ASSIGNMENT_SETTINGS.METRICS.TABS.UTILIZATION'),
+  },
 ];
 
 const agentHistoryColumns = [
@@ -99,28 +117,32 @@ const policyPerformanceColumns = [
   },
 ];
 
+const applyFilters = () => {
+  store.dispatch('assignmentMetrics/setFilters', filters.value);
+};
+
 onMounted(() => {
   store.dispatch('assignmentPolicies/get');
   applyFilters();
 });
 
-watch(filters, () => {
-  applyFilters();
-}, { deep: true });
-
-const applyFilters = () => {
-  store.dispatch('assignmentMetrics/setFilters', filters.value);
-};
+watch(
+  filters,
+  () => {
+    applyFilters();
+  },
+  { deep: true }
+);
 
 const exportReport = async () => {
   try {
     await store.dispatch('assignmentMetrics/exportReport', exportType.value);
   } catch (error) {
-    console.error('Export failed:', error);
+    // Export failed
   }
 };
 
-const formatTime = (seconds) => {
+const formatTime = seconds => {
   if (!seconds) return '-';
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
@@ -130,46 +152,52 @@ const formatTime = (seconds) => {
 const getAssignmentTrendData = computed(() => {
   const trends = getters['assignmentMetrics/getAssignmentTrends'].value;
   return {
-    labels: trends.map(t => new Date(t.date).toLocaleDateString()),
-    datasets: [{
-      label: t('ASSIGNMENT_SETTINGS.METRICS.CHARTS.ASSIGNMENTS'),
-      data: trends.map(t => t.total_assignments),
-      borderColor: 'rgb(99, 102, 241)',
-      backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    }],
+    labels: trends.map(trend => new Date(trend.date).toLocaleDateString()),
+    datasets: [
+      {
+        label: t('ASSIGNMENT_SETTINGS.METRICS.CHARTS.ASSIGNMENTS'),
+        data: trends.map(trend => trend.total_assignments),
+        borderColor: 'rgb(99, 102, 241)',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+      },
+    ],
   };
 });
 
 const getUtilizationChartData = computed(() => {
   return {
     labels: agentUtilization.value.map(a => a.agent_name),
-    datasets: [{
-      label: t('ASSIGNMENT_SETTINGS.METRICS.CHARTS.UTILIZATION'),
-      data: agentUtilization.value.map(a => a.utilization_percentage),
-      backgroundColor: [
-        'rgba(99, 102, 241, 0.8)',
-        'rgba(34, 197, 94, 0.8)',
-        'rgba(251, 146, 60, 0.8)',
-        'rgba(239, 68, 68, 0.8)',
-        'rgba(168, 85, 247, 0.8)',
-      ],
-    }],
+    datasets: [
+      {
+        label: t('ASSIGNMENT_SETTINGS.METRICS.CHARTS.UTILIZATION'),
+        data: agentUtilization.value.map(a => a.utilization_percentage),
+        backgroundColor: [
+          'rgba(99, 102, 241, 0.8)',
+          'rgba(34, 197, 94, 0.8)',
+          'rgba(251, 146, 60, 0.8)',
+          'rgba(239, 68, 68, 0.8)',
+          'rgba(168, 85, 247, 0.8)',
+        ],
+      },
+    ],
   };
 });
 
 const getPolicyDistributionData = computed(() => {
   return {
     labels: policyPerformance.value.map(p => p.policy_name),
-    datasets: [{
-      data: policyPerformance.value.map(p => p.total_assignments),
-      backgroundColor: [
-        'rgba(99, 102, 241, 0.8)',
-        'rgba(34, 197, 94, 0.8)',
-        'rgba(251, 146, 60, 0.8)',
-        'rgba(239, 68, 68, 0.8)',
-        'rgba(168, 85, 247, 0.8)',
-      ],
-    }],
+    datasets: [
+      {
+        data: policyPerformance.value.map(p => p.total_assignments),
+        backgroundColor: [
+          'rgba(99, 102, 241, 0.8)',
+          'rgba(34, 197, 94, 0.8)',
+          'rgba(251, 146, 60, 0.8)',
+          'rgba(239, 68, 68, 0.8)',
+          'rgba(168, 85, 247, 0.8)',
+        ],
+      },
+    ],
   };
 });
 </script>
@@ -183,29 +211,35 @@ const getPolicyDistributionData = computed(() => {
 
     <div class="p-8">
       <!-- Filters -->
-      <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
-        <h3 class="text-lg font-medium mb-4">{{ $t('ASSIGNMENT_SETTINGS.METRICS.FILTERS.TITLE') }}</h3>
-        
+      <div
+        class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6"
+      >
+        <h3 class="text-lg font-medium mb-4">
+          {{ $t('ASSIGNMENT_SETTINGS.METRICS.FILTERS.TITLE') }}
+        </h3>
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <DateRange
-            v-model:startDate="filters.startDate"
-            v-model:endDate="filters.endDate"
+            v-model:start-date="filters.startDate"
+            v-model:end-date="filters.endDate"
           />
-          
+
           <Agents
             v-model="filters.agentIds"
             :label="$t('ASSIGNMENT_SETTINGS.METRICS.FILTERS.AGENTS')"
           />
-          
+
           <MultiSelect
             v-model="filters.policyIds"
             :options="assignmentPolicies"
             :label="$t('ASSIGNMENT_SETTINGS.METRICS.FILTERS.POLICIES')"
-            :placeholder="$t('ASSIGNMENT_SETTINGS.METRICS.FILTERS.POLICIES_PLACEHOLDER')"
+            :placeholder="
+              $t('ASSIGNMENT_SETTINGS.METRICS.FILTERS.POLICIES_PLACEHOLDER')
+            "
             track-by="id"
             label-key="name"
           />
-          
+
           <div class="flex items-end">
             <Button
               variant="primary"
@@ -226,11 +260,11 @@ const getPolicyDistributionData = computed(() => {
           <button
             v-for="tab in tabs"
             :key="tab.key"
+            class="px-4 py-2 text-sm font-medium transition-colors"
             :class="[
-              'px-4 py-2 text-sm font-medium transition-colors',
               activeTab === tab.key
                 ? 'text-woot-600 border-b-2 border-woot-600'
-                : 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-600 hover:text-slate-900',
             ]"
             @click="activeTab = tab.key"
           >
@@ -240,7 +274,10 @@ const getPolicyDistributionData = computed(() => {
       </div>
 
       <!-- Loading State -->
-      <div v-if="uiFlags.isFetching" class="flex items-center justify-center h-64">
+      <div
+        v-if="uiFlags.isFetching"
+        class="flex items-center justify-center h-64"
+      >
         <Spinner size="large" />
       </div>
 
@@ -252,19 +289,19 @@ const getPolicyDistributionData = computed(() => {
             :value="metrics.overview.total_assignments || 0"
             icon="chat"
           />
-          
+
           <ReportMetricCard
             :title="$t('ASSIGNMENT_SETTINGS.METRICS.CARDS.AVG_RESPONSE_TIME')"
             :value="formatTime(metrics.overview.avg_response_time)"
             icon="clock"
           />
-          
+
           <ReportMetricCard
             :title="$t('ASSIGNMENT_SETTINGS.METRICS.CARDS.SATISFACTION_SCORE')"
             :value="`${metrics.overview.satisfaction_score || 0}%`"
             icon="emoji-happy"
           />
-          
+
           <ReportMetricCard
             :title="$t('ASSIGNMENT_SETTINGS.METRICS.CARDS.REASSIGNMENT_RATE')"
             :value="`${metrics.overview.reassignment_rate || 0}%`"
@@ -276,9 +313,9 @@ const getPolicyDistributionData = computed(() => {
           <h3 class="text-lg font-medium mb-4">
             {{ $t('ASSIGNMENT_SETTINGS.METRICS.CHARTS.ASSIGNMENT_TRENDS') }}
           </h3>
-          <LineChart
+          <BarChart
             :data="getAssignmentTrendData"
-            :height="300"
+            :chart-options="{ height: 300 }"
           />
         </div>
       </div>
@@ -307,7 +344,7 @@ const getPolicyDistributionData = computed(() => {
 
           <template #satisfaction_score="{ row }">
             <div class="flex items-center gap-2">
-              <span>{{ row.satisfaction_score }}%</span>
+              <span>{{ row.satisfaction_score }}</span>
               <div class="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
                 <div
                   class="h-full bg-green-500"
@@ -318,12 +355,17 @@ const getPolicyDistributionData = computed(() => {
           </template>
 
           <template #efficiency_score="{ row }">
-            <span :class="[
-              'font-medium',
-              row.efficiency_score >= 80 ? 'text-green-600' :
-              row.efficiency_score >= 60 ? 'text-yellow-600' : 'text-red-600'
-            ]">
-              {{ row.efficiency_score }}%
+            <span
+              class="font-medium"
+              :class="[
+                row.efficiency_score >= 80
+                  ? 'text-green-600'
+                  : row.efficiency_score >= 60
+                    ? 'text-yellow-600'
+                    : 'text-red-600',
+              ]"
+            >
+              {{ row.efficiency_score }}
             </span>
           </template>
         </Table>
@@ -332,28 +374,36 @@ const getPolicyDistributionData = computed(() => {
       <!-- Policy Performance Tab -->
       <div v-else-if="activeTab === 'policy_performance'" class="space-y-6">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div
+            class="bg-white rounded-lg shadow-sm border border-slate-200 p-6"
+          >
             <h3 class="text-lg font-medium mb-4">
               {{ $t('ASSIGNMENT_SETTINGS.METRICS.CHARTS.POLICY_DISTRIBUTION') }}
             </h3>
-            <PieChart
+            <BarChart
               :data="getPolicyDistributionData"
-              :height="300"
+              :chart-options="{ height: 300 }"
             />
           </div>
 
-          <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div
+            class="bg-white rounded-lg shadow-sm border border-slate-200 p-6"
+          >
             <h3 class="text-lg font-medium mb-4">
-              {{ $t('ASSIGNMENT_SETTINGS.METRICS.CHARTS.POLICY_SUCCESS_RATES') }}
+              {{
+                $t('ASSIGNMENT_SETTINGS.METRICS.CHARTS.POLICY_SUCCESS_RATES')
+              }}
             </h3>
             <BarChart
               :data="{
                 labels: policyPerformance.map(p => p.policy_name),
-                datasets: [{
-                  label: t('ASSIGNMENT_SETTINGS.METRICS.CHARTS.SUCCESS_RATE'),
-                  data: policyPerformance.map(p => p.success_rate),
-                  backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                }],
+                datasets: [
+                  {
+                    label: t('ASSIGNMENT_SETTINGS.METRICS.CHARTS.SUCCESS_RATE'),
+                    data: policyPerformance.map(p => p.success_rate),
+                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                  },
+                ],
               }"
               :height="300"
             />
@@ -370,12 +420,17 @@ const getPolicyDistributionData = computed(() => {
           </template>
 
           <template #success_rate="{ row }">
-            <span :class="[
-              'font-medium',
-              row.success_rate >= 90 ? 'text-green-600' :
-              row.success_rate >= 70 ? 'text-yellow-600' : 'text-red-600'
-            ]">
-              {{ row.success_rate }}%
+            <span
+              class="font-medium"
+              :class="[
+                row.success_rate >= 90
+                  ? 'text-green-600'
+                  : row.success_rate >= 70
+                    ? 'text-yellow-600'
+                    : 'text-red-600',
+              ]"
+            >
+              {{ row.success_rate }}
             </span>
           </template>
 
@@ -384,7 +439,7 @@ const getPolicyDistributionData = computed(() => {
           </template>
 
           <template #reassignment_rate="{ row }">
-            {{ row.reassignment_rate }}%
+            {{ row.reassignment_rate }}
           </template>
         </Table>
       </div>

@@ -8,15 +8,14 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { useAdmin } from 'dashboard/composables/useAdmin';
 import BaseSettingsHeader from '../../components/BaseSettingsHeader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import Table from 'dashboard/components/widgets/Table.vue';
-import ConfirmationModal from 'dashboard/components/widgets/ConfirmationModal.vue';
+import Table from 'dashboard/components/table/Table.vue';
+import ConfirmationModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 import ApprovalModal from './components/ApprovalModal.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
-import Tabs from 'dashboard/components-next/tabs/Tabs.vue';
-import TabsItem from 'dashboard/components-next/tabs/TabsItem.vue';
-import Badge from 'dashboard/components-next/badge/Badge.vue';
-import Select from 'dashboard/components/widgets/forms/Select.vue';
+// Tabs components are globally registered as woot-tabs and woot-tabs-item
+// Badge component doesn't exist - will use inline styling instead
+// Use native select element instead
 
 const store = useStore();
 const getters = useStoreGetters();
@@ -37,11 +36,28 @@ const showApprovalModal = ref(false);
 const selectedLeave = ref(null);
 const approvalAction = ref('');
 
-const tabs = [
-  { key: 'all', label: t('ASSIGNMENT_SETTINGS.LEAVES.TABS.ALL') },
-  { key: 'my_leaves', label: t('ASSIGNMENT_SETTINGS.LEAVES.TABS.MY_LEAVES') },
-  { key: 'pending_approvals', label: t('ASSIGNMENT_SETTINGS.LEAVES.TABS.PENDING_APPROVALS') },
-];
+const tabs = computed(() => [
+  {
+    key: 'all',
+    label: t('ASSIGNMENT_SETTINGS.LEAVES.TABS.ALL'),
+    count: leaves.value.length,
+  },
+  {
+    key: 'my_leaves',
+    label: t('ASSIGNMENT_SETTINGS.LEAVES.TABS.MY_LEAVES'),
+    count: leaves.value.filter(leave => leave.agent_id === currentUserId.value)
+      .length,
+  },
+  {
+    key: 'pending_approvals',
+    label: t('ASSIGNMENT_SETTINGS.LEAVES.TABS.PENDING_APPROVALS'),
+    count: pendingLeaves.value.length,
+  },
+]);
+
+const activeTabIndex = computed(() => {
+  return tabs.value.findIndex(tab => tab.key === activeTab.value);
+});
 
 const statusOptions = [
   { value: 'all', label: t('COMMON.ALL') },
@@ -85,22 +101,18 @@ const columns = [
 
 const filteredLeaves = computed(() => {
   let data = leaves.value;
-  
+
   if (activeTab.value === 'my_leaves') {
     data = data.filter(leave => leave.agent_id === currentUserId.value);
   } else if (activeTab.value === 'pending_approvals') {
     data = pendingLeaves.value;
   }
-  
+
   if (statusFilter.value !== 'all') {
     data = data.filter(leave => leave.status === statusFilter.value);
   }
-  
-  return data;
-});
 
-onMounted(() => {
-  fetchLeaves();
+  return data;
 });
 
 const fetchLeaves = async () => {
@@ -113,9 +125,16 @@ const fetchLeaves = async () => {
   }
 };
 
-const onTabChange = () => {
-  statusFilter.value = 'all';
+onMounted(() => {
   fetchLeaves();
+});
+
+const onTabChange = index => {
+  if (index >= 0 && index < tabs.value.length) {
+    activeTab.value = tabs.value[index].key;
+    statusFilter.value = 'all';
+    fetchLeaves();
+  }
 };
 
 const navigateToNew = () => {
@@ -141,7 +160,7 @@ const closeDeletePopup = () => {
 
 const confirmDelete = async () => {
   if (!selectedLeave.value) return;
-  
+
   try {
     loading.value[selectedLeave.value.id] = true;
     await store.dispatch('leaves/delete', selectedLeave.value.id);
@@ -166,9 +185,9 @@ const closeApprovalModal = () => {
   showApprovalModal.value = false;
 };
 
-const handleApproval = async (notes) => {
+const handleApproval = async notes => {
   if (!selectedLeave.value) return;
-  
+
   try {
     if (approvalAction.value === 'approve') {
       await store.dispatch('leaves/approve', {
@@ -186,23 +205,17 @@ const handleApproval = async (notes) => {
     closeApprovalModal();
     fetchLeaves();
   } catch (error) {
-    const message = approvalAction.value === 'approve'
-      ? t('ASSIGNMENT_SETTINGS.LEAVES.APPROVE.ERROR')
-      : t('ASSIGNMENT_SETTINGS.LEAVES.REJECT.ERROR');
+    const message =
+      approvalAction.value === 'approve'
+        ? t('ASSIGNMENT_SETTINGS.LEAVES.APPROVE.ERROR')
+        : t('ASSIGNMENT_SETTINGS.LEAVES.REJECT.ERROR');
     useAlert(message);
   }
 };
 
-const getStatusBadgeVariant = (status) => {
-  const variants = {
-    pending: 'warning',
-    approved: 'success',
-    rejected: 'danger',
-  };
-  return variants[status] || 'default';
-};
+// Removed getStatusBadgeVariant as we're using inline classes now
 
-const canManageLeave = (leave) => {
+const canManageLeave = leave => {
   return isAdmin.value || leave.agent_id === currentUserId.value;
 };
 </script>
@@ -218,26 +231,41 @@ const canManageLeave = (leave) => {
 
     <div class="p-8">
       <div class="mb-6">
-        <Tabs v-model="activeTab" @change="onTabChange">
-          <TabsItem
-            v-for="tab in tabs"
+        <woot-tabs :index="activeTabIndex" @change="onTabChange">
+          <woot-tabs-item
+            v-for="(tab, index) in tabs"
             :key="tab.key"
-            :name="tab.key"
-            :label="tab.label"
+            :index="index"
+            :name="tab.label"
+            :count="tab.count"
           />
-        </Tabs>
+        </woot-tabs>
       </div>
 
       <div class="flex justify-between items-center mb-4">
-        <Select
-          v-model="statusFilter"
-          :options="statusOptions"
-          :label="$t('ASSIGNMENT_SETTINGS.LEAVES.FILTER.STATUS')"
-          class="w-48"
-        />
+        <div class="w-48">
+          <label class="block text-sm font-medium text-slate-700 mb-1">
+            {{ $t('ASSIGNMENT_SETTINGS.LEAVES.FILTER.STATUS') }}
+          </label>
+          <select
+            v-model="statusFilter"
+            class="w-full text-sm rounded-md border-slate-300"
+          >
+            <option
+              v-for="option in statusOptions"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
       </div>
 
-      <div v-if="uiFlags.isFetching" class="flex items-center justify-center h-64">
+      <div
+        v-if="uiFlags.isFetching"
+        class="flex items-center justify-center h-64"
+      >
         <Spinner size="large" />
       </div>
 
@@ -266,7 +294,9 @@ const canManageLeave = (leave) => {
                 class="w-8 h-8 rounded-full"
               />
               <div>
-                <div class="font-medium text-slate-900">{{ row.agent.name }}</div>
+                <div class="font-medium text-slate-900">
+                  {{ row.agent.name }}
+                </div>
                 <div class="text-xs text-slate-600">{{ row.agent.email }}</div>
               </div>
             </div>
@@ -278,8 +308,13 @@ const canManageLeave = (leave) => {
 
           <template #dates="{ row }">
             <div class="text-sm">
-              <div>{{ $d(new Date(row.start_date), 'short') }} - {{ $d(new Date(row.end_date), 'short') }}</div>
-              <div class="text-slate-600">{{ row.total_days }} {{ $tc('COMMON.DAYS', row.total_days) }}</div>
+              <div>
+                {{ $d(new Date(row.start_date), 'short') }} -
+                {{ $d(new Date(row.end_date), 'short') }}
+              </div>
+              <div class="text-slate-600">
+                {{ row.total_days }} {{ $tc('COMMON.DAYS', row.total_days) }}
+              </div>
             </div>
           </template>
 
@@ -290,9 +325,24 @@ const canManageLeave = (leave) => {
           </template>
 
           <template #status="{ row }">
-            <Badge :variant="getStatusBadgeVariant(row.status)">
-              {{ $t(`ASSIGNMENT_SETTINGS.LEAVES.STATUS.${row.status.toUpperCase()}`) }}
-            </Badge>
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              :class="[
+                row.status === 'approved'
+                  ? 'bg-green-100 text-green-800'
+                  : row.status === 'rejected'
+                    ? 'bg-red-100 text-red-800'
+                    : row.status === 'cancelled'
+                      ? 'bg-slate-100 text-slate-800'
+                      : 'bg-yellow-100 text-yellow-800',
+              ]"
+            >
+              {{
+                $t(
+                  `ASSIGNMENT_SETTINGS.LEAVES.STATUS.${row.status.toUpperCase()}`
+                )
+              }}
+            </span>
           </template>
 
           <template #actions="{ row }">
@@ -304,7 +354,7 @@ const canManageLeave = (leave) => {
                 :title="$t('COMMON.VIEW')"
                 @click="viewLeave(row)"
               />
-              
+
               <template v-if="row.status === 'pending' && isAdmin">
                 <Button
                   variant="clear"
@@ -323,7 +373,7 @@ const canManageLeave = (leave) => {
                   @click="openApprovalModal(row, 'reject')"
                 />
               </template>
-              
+
               <Button
                 v-if="canManageLeave(row) && row.status === 'pending'"
                 variant="clear"

@@ -7,31 +7,34 @@ export const getters = {
   getAssignmentDistribution: state => state.metrics.assignmentDistribution,
   getFilters: state => state.filters,
   getUIFlags: state => state.uiFlags,
-  
+
   getTopPerformingAgents: state => {
     return [...state.metrics.agentHistory]
       .sort((a, b) => b.assignments_handled - a.assignments_handled)
       .slice(0, 5);
   },
-  
+
   getTopPerformingPolicies: state => {
     return [...state.metrics.policyPerformance]
       .sort((a, b) => b.success_rate - a.success_rate)
       .slice(0, 5);
   },
-  
+
   getAverageUtilization: state => {
     const utilization = state.metrics.agentUtilization;
     if (!utilization.length) return 0;
-    
-    const totalUtilization = utilization.reduce((sum, agent) => sum + agent.utilization_percentage, 0);
+
+    const totalUtilization = utilization.reduce(
+      (sum, agent) => sum + agent.utilization_percentage,
+      0
+    );
     return (totalUtilization / utilization.length).toFixed(2);
   },
-  
+
   getAssignmentTrends: state => {
     const history = state.metrics.agentHistory;
     if (!history.length) return [];
-    
+
     // Group by date and calculate trends
     const trendMap = {};
     history.forEach(entry => {
@@ -48,7 +51,7 @@ export const getters = {
       trendMap[date].avg_response_time += entry.avg_response_time;
       trendMap[date].count += 1;
     });
-    
+
     return Object.values(trendMap).map(trend => ({
       date: trend.date,
       total_assignments: trend.total_assignments,

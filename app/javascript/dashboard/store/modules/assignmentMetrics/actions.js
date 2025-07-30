@@ -16,7 +16,9 @@ export const actions = {
   getAgentHistory: async ({ commit, state }) => {
     commit('setUIFlag', { isFetchingHistory: true });
     try {
-      const response = await assignmentMetricsAPI.getAgentHistory(state.filters);
+      const response = await assignmentMetricsAPI.getAgentHistory(
+        state.filters
+      );
       commit('setAgentHistory', response.data);
     } catch (error) {
       throw new Error(error);
@@ -28,7 +30,9 @@ export const actions = {
   getPolicyPerformance: async ({ commit, state }) => {
     commit('setUIFlag', { isFetchingPerformance: true });
     try {
-      const response = await assignmentMetricsAPI.getPolicyPerformance(state.filters);
+      const response = await assignmentMetricsAPI.getPolicyPerformance(
+        state.filters
+      );
       commit('setPolicyPerformance', response.data);
     } catch (error) {
       throw new Error(error);
@@ -40,7 +44,9 @@ export const actions = {
   getAgentUtilization: async ({ commit, state }) => {
     commit('setUIFlag', { isFetchingUtilization: true });
     try {
-      const response = await assignmentMetricsAPI.getAgentUtilization(state.filters);
+      const response = await assignmentMetricsAPI.getAgentUtilization(
+        state.filters
+      );
       commit('setAgentUtilization', response.data);
     } catch (error) {
       throw new Error(error);
@@ -52,7 +58,9 @@ export const actions = {
   getAssignmentDistribution: async ({ commit, state }) => {
     commit('setUIFlag', { isFetchingDistribution: true });
     try {
-      const response = await assignmentMetricsAPI.getAssignmentDistribution(state.filters);
+      const response = await assignmentMetricsAPI.getAssignmentDistribution(
+        state.filters
+      );
       commit('setAssignmentDistribution', response.data);
     } catch (error) {
       throw new Error(error);
@@ -64,18 +72,24 @@ export const actions = {
   exportReport: async ({ commit, state }, type) => {
     commit('setUIFlag', { isExporting: true });
     try {
-      const response = await assignmentMetricsAPI.exportReport(type, state.filters);
-      
+      const response = await assignmentMetricsAPI.exportReport(
+        type,
+        state.filters
+      );
+
       // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `assignment-${type}-report-${Date.now()}.csv`);
+      link.setAttribute(
+        'download',
+        `assignment-${type}-report-${Date.now()}.csv`
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      
+
       return true;
     } catch (error) {
       throw new Error(error);

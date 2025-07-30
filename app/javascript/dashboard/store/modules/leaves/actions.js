@@ -65,7 +65,9 @@ export const actions = {
   approve: async ({ commit }, { id, approverNotes }) => {
     commit('setUIFlag', { isApproving: true });
     try {
-      const response = await leavesAPI.approve(id, { approver_notes: approverNotes });
+      const response = await leavesAPI.approve(id, {
+        approver_notes: approverNotes,
+      });
       commit('setLeave', response.data);
       return response.data;
     } catch (error) {
@@ -78,7 +80,9 @@ export const actions = {
   reject: async ({ commit }, { id, approverNotes }) => {
     commit('setUIFlag', { isRejecting: true });
     try {
-      const response = await leavesAPI.reject(id, { approver_notes: approverNotes });
+      const response = await leavesAPI.reject(id, {
+        approver_notes: approverNotes,
+      });
       commit('setLeave', response.data);
       return response.data;
     } catch (error) {

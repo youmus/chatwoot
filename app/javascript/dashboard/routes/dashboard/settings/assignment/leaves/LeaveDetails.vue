@@ -8,7 +8,7 @@ import { useAdmin } from 'dashboard/composables/useAdmin';
 import { useAccount } from 'dashboard/composables/useAccount';
 import BaseSettingsHeader from '../../components/BaseSettingsHeader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import Badge from 'dashboard/components-next/badge/Badge.vue';
+// Badge component doesn't exist - will use inline styling instead
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ApprovalModal from './components/ApprovalModal.vue';
 
@@ -22,7 +22,6 @@ const { currentUserId } = useAccount();
 
 const leaveId = computed(() => route.params.id);
 const leave = computed(() => getters['leaves/getLeave'].value(leaveId.value));
-const uiFlags = computed(() => getters['leaves/getUIFlags'].value);
 
 const loading = ref(true);
 const showApprovalModal = ref(false);
@@ -39,20 +38,13 @@ onMounted(async () => {
   }
 });
 
-const getStatusBadgeVariant = (status) => {
-  const variants = {
-    pending: 'warning',
-    approved: 'success',
-    rejected: 'danger',
-  };
-  return variants[status] || 'default';
-};
+// Removed getStatusBadgeVariant as we're using inline classes now
 
 const goBack = () => {
   router.push({ name: 'assignment_leaves_list' });
 };
 
-const openApprovalModal = (action) => {
+const openApprovalModal = action => {
   approvalAction.value = action;
   showApprovalModal.value = true;
 };
@@ -62,7 +54,7 @@ const closeApprovalModal = () => {
   showApprovalModal.value = false;
 };
 
-const handleApproval = async (notes) => {
+const handleApproval = async notes => {
   try {
     if (approvalAction.value === 'approve') {
       await store.dispatch('leaves/approve', {
@@ -79,9 +71,10 @@ const handleApproval = async (notes) => {
     }
     closeApprovalModal();
   } catch (error) {
-    const message = approvalAction.value === 'approve'
-      ? t('ASSIGNMENT_SETTINGS.LEAVES.APPROVE.ERROR')
-      : t('ASSIGNMENT_SETTINGS.LEAVES.REJECT.ERROR');
+    const message =
+      approvalAction.value === 'approve'
+        ? t('ASSIGNMENT_SETTINGS.LEAVES.APPROVE.ERROR')
+        : t('ASSIGNMENT_SETTINGS.LEAVES.REJECT.ERROR');
     useAlert(message);
   }
 };
@@ -91,13 +84,15 @@ const canApproveReject = computed(() => {
 });
 
 const canDelete = computed(() => {
-  return leave.value?.status === 'pending' && 
-    (isAdmin.value || leave.value?.agent_id === currentUserId.value);
+  return (
+    leave.value?.status === 'pending' &&
+    (isAdmin.value || leave.value?.agent_id === currentUserId.value)
+  );
 });
 
 const deleteLeave = async () => {
-  if (!confirm(t('ASSIGNMENT_SETTINGS.LEAVES.DELETE.CONFIRM'))) return;
-  
+  if (!window.confirm(t('ASSIGNMENT_SETTINGS.LEAVES.DELETE.CONFIRM'))) return;
+
   try {
     await store.dispatch('leaves/delete', leaveId.value);
     useAlert(t('ASSIGNMENT_SETTINGS.LEAVES.DELETE.SUCCESS'));
@@ -137,9 +132,24 @@ const deleteLeave = async () => {
                 <p class="text-sm text-slate-600">{{ leave.agent?.email }}</p>
               </div>
             </div>
-            <Badge :variant="getStatusBadgeVariant(leave.status)">
-              {{ $t(`ASSIGNMENT_SETTINGS.LEAVES.STATUS.${leave.status.toUpperCase()}`) }}
-            </Badge>
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              :class="[
+                leave.status === 'approved'
+                  ? 'bg-green-100 text-green-800'
+                  : leave.status === 'rejected'
+                    ? 'bg-red-100 text-red-800'
+                    : leave.status === 'cancelled'
+                      ? 'bg-slate-100 text-slate-800'
+                      : 'bg-yellow-100 text-yellow-800',
+              ]"
+            >
+              {{
+                $t(
+                  `ASSIGNMENT_SETTINGS.LEAVES.STATUS.${leave.status.toUpperCase()}`
+                )
+              }}
+            </span>
           </div>
         </div>
 
@@ -151,7 +161,11 @@ const deleteLeave = async () => {
               {{ $t('ASSIGNMENT_SETTINGS.LEAVES.DETAILS.TYPE') }}
             </h3>
             <p class="text-lg font-medium">
-              {{ $t(`ASSIGNMENT_SETTINGS.LEAVES.TYPES.${leave.leave_type.toUpperCase()}`) }}
+              {{
+                $t(
+                  `ASSIGNMENT_SETTINGS.LEAVES.TYPES.${leave.leave_type.toUpperCase()}`
+                )
+              }}
             </p>
           </div>
 
@@ -161,12 +175,17 @@ const deleteLeave = async () => {
               {{ $t('ASSIGNMENT_SETTINGS.LEAVES.DETAILS.DATES') }}
             </h3>
             <p class="text-lg">
-              {{ $d(new Date(leave.start_date), 'long') }} - {{ $d(new Date(leave.end_date), 'long') }}
+              {{ $d(new Date(leave.start_date), 'long') }} -
+              {{ $d(new Date(leave.end_date), 'long') }}
             </p>
             <p class="text-sm text-slate-600 mt-1">
               {{ leave.total_days }} {{ $tc('COMMON.DAYS', leave.total_days) }}
               <span v-if="leave.is_half_day">
-                ({{ $t(`ASSIGNMENT_SETTINGS.LEAVES.HALF_DAY.${leave.half_day_period.toUpperCase()}`) }})
+                ({{
+                  $t(
+                    `ASSIGNMENT_SETTINGS.LEAVES.HALF_DAY.${leave.half_day_period.toUpperCase()}`
+                  )
+                }})
               </span>
             </p>
           </div>
@@ -185,18 +204,21 @@ const deleteLeave = async () => {
               <h3 class="text-sm font-medium text-slate-500 mb-1">
                 {{ $t('ASSIGNMENT_SETTINGS.LEAVES.DETAILS.REQUESTED_ON') }}
               </h3>
-              <p class="text-base">{{ $d(new Date(leave.created_at), 'long') }}</p>
+              <p class="text-base">
+                {{ $d(new Date(leave.created_at), 'long') }}
+              </p>
             </div>
-            
+
             <div v-if="leave.status !== 'pending'">
               <h3 class="text-sm font-medium text-slate-500 mb-1">
-                {{ leave.status === 'approved' 
-                  ? $t('ASSIGNMENT_SETTINGS.LEAVES.DETAILS.APPROVED_BY')
-                  : $t('ASSIGNMENT_SETTINGS.LEAVES.DETAILS.REJECTED_BY')
+                {{
+                  leave.status === 'approved'
+                    ? $t('ASSIGNMENT_SETTINGS.LEAVES.DETAILS.APPROVED_BY')
+                    : $t('ASSIGNMENT_SETTINGS.LEAVES.DETAILS.REJECTED_BY')
                 }}
               </h3>
               <p class="text-base">
-                {{ leave.approver?.name }} 
+                {{ leave.approver?.name }}
                 <span class="text-sm text-slate-600">
                   ({{ $d(new Date(leave.updated_at), 'short') }})
                 </span>
@@ -209,7 +231,9 @@ const deleteLeave = async () => {
             <h3 class="text-sm font-medium text-slate-500 mb-1">
               {{ $t('ASSIGNMENT_SETTINGS.LEAVES.DETAILS.APPROVER_NOTES') }}
             </h3>
-            <p class="text-base whitespace-pre-wrap">{{ leave.approver_notes }}</p>
+            <p class="text-base whitespace-pre-wrap">
+              {{ leave.approver_notes }}
+            </p>
           </div>
         </div>
 
@@ -225,7 +249,7 @@ const deleteLeave = async () => {
             >
               {{ $t('COMMON.DELETE') }}
             </Button>
-            
+
             <div v-if="canApproveReject" class="flex gap-3 ml-auto">
               <Button
                 variant="clear"
@@ -234,10 +258,7 @@ const deleteLeave = async () => {
               >
                 {{ $t('ASSIGNMENT_SETTINGS.LEAVES.REJECT.BUTTON') }}
               </Button>
-              <Button
-                variant="primary"
-                @click="openApprovalModal('approve')"
-              >
+              <Button variant="primary" @click="openApprovalModal('approve')">
                 {{ $t('ASSIGNMENT_SETTINGS.LEAVES.APPROVE.BUTTON') }}
               </Button>
             </div>

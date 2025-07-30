@@ -1,5 +1,3 @@
-import Vue from 'vue';
-
 export const mutations = {
   setUIFlag(state, data) {
     state.uiFlags = {
@@ -11,15 +9,19 @@ export const mutations = {
   setAssignmentPolicies(state, policies) {
     state.records = {};
     policies.forEach(policy => {
-      Vue.set(state.records, policy.id, policy);
+      state.records[policy.id] = policy;
     });
   },
 
   setAssignmentPolicy(state, policy) {
-    Vue.set(state.records, policy.id, policy);
+    state.records = {
+      ...state.records,
+      [policy.id]: policy,
+    };
   },
 
   deleteAssignmentPolicy(state, id) {
-    Vue.delete(state.records, id);
+    const { [id]: deleted, ...rest } = state.records;
+    state.records = rest;
   },
 };

@@ -1,13 +1,11 @@
 <script setup>
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
-import { useEnterprise } from 'dashboard/composables/useEnterprise';
+import { useConfig } from 'dashboard/composables/useConfig';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import BaseSettingsListItem from '../components/BaseSettingsListItem.vue';
 
 const router = useRouter();
-const { t } = useI18n();
-const { isOnEnterpriseEdition } = useEnterprise();
+const { isEnterprise } = useConfig();
 
 const settingItems = [
   {
@@ -50,7 +48,7 @@ const settingItems = [
 ];
 
 const visibleSettings = settingItems.filter(
-  item => !item.enterprise || isOnEnterpriseEdition.value
+  item => !item.enterprise || isEnterprise
 );
 
 const navigateTo = route => {
@@ -64,7 +62,7 @@ const navigateTo = route => {
       :title="$t('ASSIGNMENT_SETTINGS.HEADER')"
       :description="$t('ASSIGNMENT_SETTINGS.DESCRIPTION')"
     />
-    
+
     <div class="grid grid-cols-1 gap-4 p-8 md:grid-cols-2">
       <BaseSettingsListItem
         v-for="item in visibleSettings"

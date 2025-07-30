@@ -4,13 +4,13 @@ import { useRoute, useRouter } from 'vue-router';
 import { useStore, useStoreGetters } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
-import { useEnterprise } from 'dashboard/composables/useEnterprise';
+import { useConfig } from 'dashboard/composables/useConfig';
 import BaseSettingsHeader from '../../components/BaseSettingsHeader.vue';
 import BasePaywallModal from '../../components/BasePaywallModal.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components/widgets/forms/Input.vue';
-import Textarea from 'dashboard/components/widgets/forms/Textarea.vue';
-import MultiSelect from 'dashboard/components/widgets/forms/MultiSelect.vue';
+import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
+import MultiSelect from 'dashboard/components-next/filter/inputs/MultiSelect.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 
 const route = useRoute();
@@ -18,7 +18,7 @@ const router = useRouter();
 const store = useStore();
 const getters = useStoreGetters();
 const { t } = useI18n();
-const { isOnEnterpriseEdition } = useEnterprise();
+const { isEnterprise } = useConfig();
 
 const isEditMode = computed(() => !!route.params.id);
 const policyId = computed(() => route.params.id);
@@ -36,19 +36,6 @@ const formData = ref({
 });
 
 const errors = ref({});
-
-onMounted(async () => {
-  if (!isOnEnterpriseEdition.value) {
-    showPaywallModal.value = true;
-    return;
-  }
-
-  await store.dispatch('agents/get');
-  
-  if (isEditMode.value) {
-    await loadPolicy();
-  }
-});
 
 const loadPolicy = async () => {
   try {
@@ -70,66 +57,76 @@ const loadPolicy = async () => {
 
 const validateForm = () => {
   errors.value = {};
-  
+
   if (!formData.value.name) {
     errors.value.name = t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.NAME_REQUIRED');
   }
-  
+
   if (!formData.value.max_capacity || formData.value.max_capacity < 1) {
-    errors.value.max_capacity = t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.CAPACITY_REQUIRED');
+    errors.value.max_capacity = t(
+      'ASSIGNMENT_SETTINGS.CAPACITY.FORM.CAPACITY_REQUIRED'
+    );
   }
-  
+
   if (!formData.value.agent_ids.length) {
-    errors.value.agent_ids = t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.AGENTS_REQUIRED');
+    errors.value.agent_ids = t(
+      'ASSIGNMENT_SETTINGS.CAPACITY.FORM.AGENTS_REQUIRED'
+    );
   }
-  
+
   return Object.keys(errors.value).length === 0;
 };
 
 const savePolicy = async () => {
   if (!validateForm()) return;
-  
+
   try {
     const payload = {
       name: formData.value.name,
       description: formData.value.description,
       max_capacity: formData.value.max_capacity,
     };
-    
+
     if (isEditMode.value) {
       // Update policy
       await store.dispatch('agentCapacity/update', {
         id: policyId.value,
         ...payload,
       });
-      
+
       // Update agent assignments if changed
       const currentAgentIds = formData.value.agent_ids;
-      const policy = getters['agentCapacity/getCapacityPolicy'].value(policyId.value);
+      const policy = getters['agentCapacity/getCapacityPolicy'].value(
+        policyId.value
+      );
       const existingAgentIds = policy?.agent_ids || [];
-      
-      const agentsToAdd = currentAgentIds.filter(id => !existingAgentIds.includes(id));
-      const agentsToRemove = existingAgentIds.filter(id => !currentAgentIds.includes(id));
-      
+
+      const agentsToAdd = currentAgentIds.filter(
+        id => !existingAgentIds.includes(id)
+      );
+      const agentsToRemove = existingAgentIds.filter(
+        id => !currentAgentIds.includes(id)
+      );
+
       if (agentsToAdd.length) {
         await store.dispatch('agentCapacity/assignAgents', {
           id: policyId.value,
           agentIds: agentsToAdd,
         });
       }
-      
+
       if (agentsToRemove.length) {
         await store.dispatch('agentCapacity/removeAgents', {
           id: policyId.value,
           agentIds: agentsToRemove,
         });
       }
-      
+
       useAlert(t('ASSIGNMENT_SETTINGS.CAPACITY.UPDATE.SUCCESS'));
     } else {
       // Create policy
       const newPolicy = await store.dispatch('agentCapacity/create', payload);
-      
+
       // Assign agents
       if (formData.value.agent_ids.length) {
         await store.dispatch('agentCapacity/assignAgents', {
@@ -137,10 +134,10 @@ const savePolicy = async () => {
           agentIds: formData.value.agent_ids,
         });
       }
-      
+
       useAlert(t('ASSIGNMENT_SETTINGS.CAPACITY.CREATE.SUCCESS'));
     }
-    
+
     router.push({ name: 'assignment_capacity_list' });
   } catch (error) {
     const message = isEditMode.value
@@ -153,12 +150,29 @@ const savePolicy = async () => {
 const cancel = () => {
   router.push({ name: 'assignment_capacity_list' });
 };
+
+onMounted(async () => {
+  if (!isEnterprise) {
+    showPaywallModal.value = true;
+    return;
+  }
+
+  await store.dispatch('agents/get');
+
+  if (isEditMode.value) {
+    await loadPolicy();
+  }
+});
 </script>
 
 <template>
   <div>
     <BaseSettingsHeader
-      :title="isEditMode ? $t('ASSIGNMENT_SETTINGS.CAPACITY.EDIT_HEADER') : $t('ASSIGNMENT_SETTINGS.CAPACITY.NEW_HEADER')"
+      :title="
+        isEditMode
+          ? $t('ASSIGNMENT_SETTINGS.CAPACITY.EDIT_HEADER')
+          : $t('ASSIGNMENT_SETTINGS.CAPACITY.NEW_HEADER')
+      "
       :description="$t('ASSIGNMENT_SETTINGS.CAPACITY.FORM_DESCRIPTION')"
       :back-button-label="$t('ASSIGNMENT_SETTINGS.CAPACITY.BACK_BUTTON')"
       @back="cancel"
@@ -168,40 +182,52 @@ const cancel = () => {
       <Spinner size="large" />
     </div>
 
-    <div v-else-if="isOnEnterpriseEdition" class="max-w-2xl p-8">
+    <div v-else-if="isEnterprise" class="max-w-2xl p-8">
       <form @submit.prevent="savePolicy">
-        <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 space-y-6">
+        <div
+          class="bg-white rounded-lg shadow-sm border border-slate-200 p-6 space-y-6"
+        >
           <Input
             v-model="formData.name"
             :label="$t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.NAME')"
-            :placeholder="$t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.NAME_PLACEHOLDER')"
+            :placeholder="
+              $t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.NAME_PLACEHOLDER')
+            "
             :error="errors.name"
             required
           />
-          
-          <Textarea
+
+          <TextArea
             v-model="formData.description"
             :label="$t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.DESCRIPTION')"
-            :placeholder="$t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.DESCRIPTION_PLACEHOLDER')"
+            :placeholder="
+              $t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.DESCRIPTION_PLACEHOLDER')
+            "
             rows="3"
           />
-          
+
           <Input
             v-model.number="formData.max_capacity"
             type="number"
             :label="$t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.MAX_CAPACITY')"
-            :placeholder="$t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.MAX_CAPACITY_PLACEHOLDER')"
-            :help-text="$t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.MAX_CAPACITY_HELP')"
+            :placeholder="
+              $t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.MAX_CAPACITY_PLACEHOLDER')
+            "
+            :help-text="
+              $t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.MAX_CAPACITY_HELP')
+            "
             :error="errors.max_capacity"
             min="1"
             required
           />
-          
+
           <MultiSelect
             v-model="formData.agent_ids"
             :options="agents"
             :label="$t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.AGENTS')"
-            :placeholder="$t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.AGENTS_PLACEHOLDER')"
+            :placeholder="
+              $t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.AGENTS_PLACEHOLDER')
+            "
             :error="errors.agent_ids"
             track-by="id"
             label-key="name"
@@ -218,20 +244,19 @@ const cancel = () => {
               </div>
             </template>
           </MultiSelect>
-          
+
           <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p class="text-sm text-blue-800">
-              <strong>{{ $t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.NOTE_TITLE') }}:</strong>
+              <strong>
+                {{ $t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.NOTE_TITLE') }}:
+              </strong>
               {{ $t('ASSIGNMENT_SETTINGS.CAPACITY.FORM.NOTE_MESSAGE') }}
             </p>
           </div>
         </div>
 
         <div class="flex justify-end gap-3 mt-6">
-          <Button
-            variant="clear"
-            @click="cancel"
-          >
+          <Button variant="clear" @click="cancel">
             {{ $t('COMMON.CANCEL') }}
           </Button>
           <Button

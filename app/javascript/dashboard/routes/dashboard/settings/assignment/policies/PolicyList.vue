@@ -6,8 +6,8 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import BaseSettingsHeader from '../../components/BaseSettingsHeader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import Table from 'dashboard/components/widgets/Table.vue';
-import ConfirmationModal from 'dashboard/components/widgets/ConfirmationModal.vue';
+import Table from 'dashboard/components/table/Table.vue';
+import ConfirmationModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 
@@ -16,7 +16,9 @@ const getters = useStoreGetters();
 const router = useRouter();
 const { t } = useI18n();
 
-const policies = computed(() => getters['assignmentPolicies/getPoliciesByPriority'].value);
+const policies = computed(
+  () => getters['assignmentPolicies/getPoliciesByPriority'].value
+);
 const uiFlags = computed(() => getters['assignmentPolicies/getUIFlags'].value);
 
 const loading = ref({});
@@ -78,7 +80,7 @@ const closeDeletePopup = () => {
 
 const confirmDelete = async () => {
   if (!selectedPolicy.value) return;
-  
+
   try {
     loading.value[selectedPolicy.value.id] = true;
     await store.dispatch('assignmentPolicies/delete', selectedPolicy.value.id);
@@ -92,13 +94,11 @@ const confirmDelete = async () => {
 };
 
 const updatePriority = async (policy, direction) => {
-  const currentIndex = policies.value.findIndex(p => p.id === policy.id);
-  const newPriority = direction === 'up' 
-    ? policy.priority - 1 
-    : policy.priority + 1;
-  
+  const newPriority =
+    direction === 'up' ? policy.priority - 1 : policy.priority + 1;
+
   if (newPriority < 1 || newPriority > policies.value.length) return;
-  
+
   try {
     await store.dispatch('assignmentPolicies/updatePriority', {
       id: policy.id,
@@ -121,7 +121,10 @@ const updatePriority = async (policy, direction) => {
     />
 
     <div class="p-8">
-      <div v-if="uiFlags.isFetching" class="flex items-center justify-center h-64">
+      <div
+        v-if="uiFlags.isFetching"
+        class="flex items-center justify-center h-64"
+      >
         <Spinner size="large" />
       </div>
 
@@ -175,10 +178,8 @@ const updatePriority = async (policy, direction) => {
           <template #status="{ row }">
             <div class="flex items-center gap-2">
               <div
-                :class="[
-                  'w-2 h-2 rounded-full',
-                  row.active ? 'bg-green-500' : 'bg-slate-400'
-                ]"
+                class="w-2 h-2 rounded-full"
+                :class="row.active ? 'bg-green-500' : 'bg-slate-400'"
               />
               <span class="text-sm">
                 {{ row.active ? $t('COMMON.ACTIVE') : $t('COMMON.INACTIVE') }}
@@ -215,7 +216,11 @@ const updatePriority = async (policy, direction) => {
     <ConfirmationModal
       v-model:show="showDeletePopup"
       :title="$t('ASSIGNMENT_SETTINGS.POLICIES.DELETE.TITLE')"
-      :message="$t('ASSIGNMENT_SETTINGS.POLICIES.DELETE.MESSAGE', { name: selectedPolicy?.name })"
+      :message="
+        $t('ASSIGNMENT_SETTINGS.POLICIES.DELETE.MESSAGE', {
+          name: selectedPolicy?.name,
+        })
+      "
       :confirm-text="$t('COMMON.DELETE')"
       :cancel-text="$t('COMMON.CANCEL')"
       @confirm="confirmDelete"
